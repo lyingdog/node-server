@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+<div class="container">
+  <div class="login">
+    <button id="login">登录</button>
+  </div>
+  <div style="margin-top: 48px">
+    <button id="getList">
+      获取商品list
+    </button>
+    <button id="getNextList">
+      获取第二页的商品list
+    </button>
+    <button id="deleteGoods">
+      删除第一个商品
+    </button>
+    <button id="updateGoods">
+      更新第一个商品
+    </button>
+    <button id="addGoods">
+      新增一个商品
+    </button>
+  </div>
+  <div id="list-container">
+
+  </div>
+  <div style="margin-top: 48px" class="upload">
+    <input type="file" id="file">
+    <button id="upload">上传文件</button>
+  </div>
+  <div style="margin-top: 48px" class="websocket">
+    <button id="socket">连接websocket</button>
+  </div>
+</div>
+<script>
+  let list = [];
+  const renderList = function (list) {
+    let s = '';
+    for (const v of list) {
+      s += `
+        <li>${v.name}</li>
+      `;
+    }
+    const str = `
+      <ul>
+        ${s}
+      </ul>
+    `;
+    const div = document.getElementById('list-container');
+    div.innerHTML = str;
+  }
+  getList.onclick = function() {
+    const pageNum = 1;
+    const pageSize = 10;
+    axios.get('http://127.0.0.1:3000/api/goods', {
+      params: {
+        pageNum,
+        pageSize
+      },
+      headers: {
+        'authorization': window.token
+      }
+    }).then(res => {
+      list = res.data.data.list;
+      renderList(list);
+    });
+  }
+
+  getNextList.onclick = function() {
+    const pageNum = 2;
+    const pageSize = 10;
+    axios.get('http://127.0.0.1:3000/api/goods', {
+      params: {
+        pageNum,
+        pageSize
+      },
+      headers: {
+        'authorization': window.token
+      }
+    }).then(res => {
+      list = [...list, ...res.data.data.list];
+      renderList(list);
+    });
+  }
+
+  deleteGoods.onclick = function (e) {
+    axios.delete('http://127.0.0.1:3000/api/goods/1', {
+      headers: {
+        'authorization': window.token
+      }
+    })
+      .then(res => {
+        console.log('res', res);
+        getList.click();
+      });
+  }
+
+  addGoods.onclick = function () {
+    const id = Date.now();
+    axios.post('http://127.0.0.1:3000/api/goods', {
+      id,
+      name: 'goods-' + id,
+      price: id
+    }, {
+      headers: {
+        'authorization': window.token
+      }
+    }).then(res => {
+      console.log('res', res);
+      getList.click();
+    });
+  }
+
+  updateGoods.onclick = function () {
+    const id = Date.now();
+    axios.put('http://127.0.0.1:3000/api/goods/1', {
+      id,
+      name: 'goods-' + id,
+      price: id
+    }, {
+      headers: {
+        'authorization': window.token
+      }
+    }).then(res => {
+      console.log('res', res);
+      getList.click();
+    });
+  }
+
+  upload.onclick = function () {
+    const file = document.getElementById('file').files[0];
+    const formdata = new FormData();
+    formdata.append("file", file);
+    console.log('formdata', formdata.get('file'), file);
+    axios.post('http://127.0.0.1:3000/api/upload', formdata, {
+      headers: {
+        'content-type': 'multipart/form-data',
+        'authorization': window.token
+      }
+    }).then(res => {
+      console.log('res', res)
+    })
+  }
+
+  login.onclick = function() {
+    axios.post('http://127.0.0.1:3000/login')
+      .then(res => {
+        console.log('res', res)
+        window.token = res.data.data;
+      })
+  }
+
+  let websocket;
+  socket.onclick = function () {
+    if (websocket) {
+      websocket.close();
+      websocket = undefined;
+    }
+    const url = `ws://127.0.0.1:9999`;
+    websocket = new WebSocket(url);
+    console.log('web', websocket);
+    websocket.onopen = () => {
+      console.log('websocket连接开启...')
+    }
+    websocket.onmessage = event => {
+      console.log('数据已接收...', event)
+    }
+    websocket.onclose = function (data) {
+      console.log('close', data)
+    }
+    websocket.onerror = function (err) {
+      console.log('err', err)
+    }
+  }
+</script>
+</body>
+</html>
